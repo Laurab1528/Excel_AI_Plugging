@@ -55,13 +55,25 @@ const App: React.FC<AppProps> = ({ host }) => {
 
   const initializeAI = async (cfg: any) => {
     try {
+      console.log('🔧 Inicializando AI con config:', cfg);
       const manager = new AIManager(cfg);
       await manager.initialize();
       setAiManager(manager);
       setCurrentProvider(manager.getCurrentProvider());
-      addMessage('system', `✅ Sistema iniciado. Usando: ${manager.getCurrentProvider()}`);
+      
+      const providerName = manager.getCurrentProvider();
+      if (providerName === 'Gemini') {
+        addMessage('system', `✅ Sistema iniciado. Usando: Gemini (gemini-2.5-flash)`);
+      } else if (providerName === 'Ollama') {
+        addMessage('system', `✅ Sistema iniciado. Usando: Ollama local (${cfg.ollamaModel})`);
+        addMessage('system', `⚠️ Nota: Gemini no está disponible o la cuota se agotó`);
+      } else {
+        addMessage('system', `⚠️ No hay proveedores disponibles. Configura tu API key.`);
+      }
     } catch (error: any) {
-      addMessage('system', `⚠️ ${error.message}`);
+      console.error('❌ Error inicializando AI:', error);
+      addMessage('system', `❌ Error: ${error.message}`);
+      addMessage('system', `💡 Solución: Haz clic en ⚙️ para configurar tu Gemini API key`);
     }
   };
 
@@ -162,17 +174,38 @@ Contexto actual: ${context}
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>🤖 AI Copilot</h1>
-        <p className="host-info">
-          {getHostName(host)} | {currentProvider}
-        </p>
+        <div>
+          <h1>🤖 AI Copilot</h1>
+          <p className="host-info">
+            {getHostName(host)}
+          </p>
+          <div style={{
+            display: 'inline-block',
+            background: currentProvider === 'Gemini' ? '#4CAF50' : currentProvider === 'Ollama' ? '#FF9800' : '#999',
+            color: 'white',
+            padding: '4px 12px',
+            borderRadius: '12px',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            marginTop: '4px'
+          }}>
+            {currentProvider === 'No configurado' ? '⚠️ No configurado' : `✓ Usando: ${currentProvider}`}
+          </div>
+        </div>
         <button 
+          type="button"
           className="config-btn" 
-          onClick={() => {
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
             console.log('🖱️ Click en botón de configuración');
             console.log('showConfig actual:', showConfig);
             setShowConfig(!showConfig);
           }}
+          onMouseDown={(e) => {
+            console.log('🖱️ MouseDown en engranaje');
+          }}
+          style={{ pointerEvents: 'auto', zIndex: 9999, cursor: 'pointer' }}
         >
           ⚙️
         </button>
@@ -278,14 +311,111 @@ Contexto actual: ${context}
             console.log('⌨️ Escribiendo:', e.target.value);
             setPrompt(e.target.value);
           }}
-          placeholder="¿Qué quieres hacer?"
+          onKeyDown={(e) => {
+            console.log('⌨️ Tecla presionada:', e.key);
+            if (e.key === 'Enter' && !loading && prompt.trim()) {
+              console.log('⌨️ Enter detectado - Intentando enviar');
+              e.preventDefault();
+              e.stopPropagation();
+              handleSubmit(e as any);
+            }
+          }}
+          onKeyPress={(e) => {
+            console.log('⌨️ KeyPress:', e.key);
+            if (e.key === 'Enter' && !loading && prompt.trim()) {
+              console.log('⌨️ Enter en KeyPress - enviando mensaje');
+              e.preventDefault();
+              handleSubmit(e as any);
+            }
+          }}
+          placeholder="¿Qué quieres hacer? (presiona Enter)"
           disabled={loading}
         />
         <button 
-          type="submit" 
+          type="button"
           className="send-btn" 
-          disabled={loading || !prompt.trim()}
-          onClick={() => console.log('🖱️ Click en botón enviar')}
+          disabled={false}
+          onClick={async () => {
+            console.log('🖱️ CLICK EN FLECHA');
+            console.log('Prompt:', prompt);
+            
+            if (!prompt.trim()) {
+              console.log('⚠️ Prompt vacío');
+              return;
+            }
+            
+            if (loading) {
+              console.log('⚠️ Ya está cargando');
+              return;
+            }
+
+            const userPrompt = prompt;
+            setPrompt('');
+            addMessage('user', userPrompt);
+            setLoading(true);
+            console.log('✅ Mensaje del usuario agregado');
+
+            try {
+              if (!aiManager) {
+                throw new Error('Sistema de IA no inicializado. Configura tu API key.');
+              }
+
+              let context = '';
+              if (service) {
+                try {
+                  context = await service.getContext();
+                } catch {
+                  context = 'No se pudo obtener el contexto';
+                }
+              }
+
+              const enhancedPrompt = `
+Eres un asistente para ${getHostName(host)}. 
+El usuario quiere: "${userPrompt}"
+
+Analiza la solicitud y responde en este formato JSON:
+{
+  "accion": "descripción de la acción a realizar",
+  "comando": "comando específico para ejecutar",
+  "explicacion": "breve explicación de lo que harás"
+}
+
+Contexto actual: ${context}
+`;
+
+              console.log('📤 Enviando a IA...');
+              const result = await aiManager.generateResponse(enhancedPrompt, context);
+              console.log('📥 Respuesta recibida:', result);
+              
+              addMessage('assistant', result.response, result.provider);
+              
+              if (result.fallbackUsed) {
+                addMessage('system', '⚠️ Se agotó la cuota de Gemini, usando Ollama');
+              }
+
+              if (service) {
+                try {
+                  const commandResult = await service.executeCommand(userPrompt);
+                  addMessage('system', commandResult);
+                } catch (error: any) {
+                  addMessage('system', `Error: ${error.message}`);
+                }
+              }
+
+              setCurrentProvider(aiManager.getCurrentProvider());
+            } catch (error: any) {
+              console.error('❌ Error:', error);
+              addMessage('system', `❌ Error: ${error.message}`);
+            } finally {
+              setLoading(false);
+            }
+          }}
+          style={{ 
+            pointerEvents: 'auto', 
+            zIndex: 9999, 
+            cursor: 'pointer',
+            opacity: prompt.trim() ? 1 : 0.5
+          }}
         >
           ➤
         </button>
