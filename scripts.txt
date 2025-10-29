@@ -1,0 +1,65 @@
+# ⚡ Scripts Rápidos para AI Copilot
+
+## Comandos Principales
+
+### Instalar dependencias
+npm install
+
+### Iniciar servidor de desarrollo
+npm start
+
+### Construir para producción
+npm run build
+
+## Ollama (Opcional)
+
+### Instalar modelo Llama 3
+ollama pull llama3
+
+### Instalar modelo Mistral (alternativa)
+ollama pull mistral
+
+### Listar modelos instalados
+ollama list
+
+### Iniciar servidor Ollama (si no está corriendo)
+ollama serve
+
+## Verificaciones
+
+### Verificar instalación de Node.js
+node --version
+
+### Verificar instalación de npm
+npm --version
+
+### Ver qué está corriendo en el puerto 3000
+netstat -ano | findstr :3000
+
+## Solución de Problemas
+
+### Limpiar caché de npm
+npm cache clean --force
+
+### Reinstalar dependencias
+Remove-Item -Recurse -Force node_modules
+npm install
+
+### Matar proceso en puerto 3000 (si está ocupado)
+# Primero encontrar el PID:
+netstat -ano | findstr :3000
+# Luego matar el proceso (reemplaza PID con el número):
+taskkill /PID <PID> /F
+
+## Office Add-ins
+
+### Limpiar caché de Office (si el add-in no se actualiza)
+# Cerrar todas las apps de Office
+# Luego en PowerShell:
+Remove-Item -Path "$env:LOCALAPPDATA\Microsoft\Office\16.0\Wef\*" -Recurse -Force
+
+---
+
+NOTA: Estos comandos están diseñados para Windows.
+Para Mac/Linux, algunos comandos pueden variar ligeramente.
+
