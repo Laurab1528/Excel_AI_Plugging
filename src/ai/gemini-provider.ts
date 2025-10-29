@@ -10,9 +10,9 @@ export class GeminiProvider implements AIProvider {
   constructor(apiKey: string) {
     this.apiKey = apiKey;
     if (apiKey && apiKey !== 'tu_api_key_aqui') {
-      try {
-        this.genAI = new GoogleGenerativeAI(apiKey);
-        this.model = this.genAI.getGenerativeModel({ model: 'gemini-pro' });
+            try {
+                this.genAI = new GoogleGenerativeAI(apiKey);
+                this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
       } catch (error) {
         console.error('Error inicializando Gemini:', error);
       }
@@ -22,19 +22,9 @@ export class GeminiProvider implements AIProvider {
   async isAvailable(): Promise<boolean> {
     if (!this.model) return false;
     
-    try {
-      // Test simple para verificar que la API funciona
-      const result = await this.model.generateContent('test');
-      return !!result;
-    } catch (error: any) {
-      // Verificar si es un error de cuota
-      if (error?.message?.includes('quota') || error?.message?.includes('limit')) {
-        console.warn('Gemini: Cuota agotada');
-        return false;
-      }
-      console.error('Gemini no disponible:', error);
-      return false;
-    }
+    // Simplemente verificar que el modelo esté inicializado
+    // No hacer peticiones de prueba para no gastar créditos
+    return true;
   }
 
   async generateResponse(prompt: string, context?: string): Promise<string> {

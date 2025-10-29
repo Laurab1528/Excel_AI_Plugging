@@ -23,6 +23,11 @@ const App: React.FC<AppProps> = ({ host }) => {
     ollamaModel: 'llama3'
   });
   const [showConfig, setShowConfig] = React.useState(false);
+  
+  // Log para debugging
+  React.useEffect(() => {
+    console.log('🔧 showConfig cambió a:', showConfig);
+  }, [showConfig]);
   const [currentProvider, setCurrentProvider] = React.useState('No configurado');
 
   React.useEffect(() => {
@@ -66,12 +71,20 @@ const App: React.FC<AppProps> = ({ host }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!prompt.trim() || loading) return;
+    console.log('📝 handleSubmit ejecutado');
+    console.log('Prompt:', prompt);
+    console.log('Loading:', loading);
+    
+    if (!prompt.trim() || loading) {
+      console.log('⚠️ Submit cancelado - prompt vacío o cargando');
+      return;
+    }
 
     const userPrompt = prompt;
     setPrompt('');
     addMessage('user', userPrompt);
     setLoading(true);
+    console.log('✅ Procesando mensaje...');
 
     try {
       if (!aiManager) {
@@ -155,7 +168,11 @@ Contexto actual: ${context}
         </p>
         <button 
           className="config-btn" 
-          onClick={() => setShowConfig(!showConfig)}
+          onClick={() => {
+            console.log('🖱️ Click en botón de configuración');
+            console.log('showConfig actual:', showConfig);
+            setShowConfig(!showConfig);
+          }}
         >
           ⚙️
         </button>
@@ -257,11 +274,19 @@ Contexto actual: ${context}
           type="text"
           className="prompt-input"
           value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
+          onChange={(e) => {
+            console.log('⌨️ Escribiendo:', e.target.value);
+            setPrompt(e.target.value);
+          }}
           placeholder="¿Qué quieres hacer?"
           disabled={loading}
         />
-        <button type="submit" className="send-btn" disabled={loading || !prompt.trim()}>
+        <button 
+          type="submit" 
+          className="send-btn" 
+          disabled={loading || !prompt.trim()}
+          onClick={() => console.log('🖱️ Click en botón enviar')}
+        >
           ➤
         </button>
       </form>
